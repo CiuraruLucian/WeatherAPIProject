@@ -1,27 +1,36 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using StackExchange.Redis;
+using System.Net.Http;
 
 namespace WeatherAPI.Controllers
 {
     [Route("api/weather")]
+    
     [ApiController]
+    
+    [EnableRateLimiting("fixed")]
     public class WeatherController : ControllerBase
     {
 
-        // Insert here the dependency injection after you get the Api Key
         private readonly IConfiguration _configuration;
 
         private readonly IConnectionMultiplexer _connection;
 
         private readonly IDatabase _redisdb;
-        public WeatherController(IConfiguration configuration, IConnectionMultiplexer connection)
+
+        private readonly HttpClient _httpClient;
+
+        
+        public WeatherController(IConfiguration configuration, IConnectionMultiplexer connection, HttpClient httpClient)
         {
             _configuration = configuration;
             _connection = connection;
             _redisdb = connection.GetDatabase();
+            _httpClient = httpClient;
         }
         [HttpGet("{city}")]
-        public IActionResult Get(string city)
+        public async Task<IActionResult> Get(string city)
         {
             try
             {
@@ -32,15 +41,17 @@ namespace WeatherAPI.Controllers
                 }
                 else
                 {
-                    _redisdb.StringSet(city, "Cached value for city", TimeSpan.FromHours(12));
-                    var weather = new { City = city, Temperature = 22, Humidity = 60, Condition = "Sunny" };
-                    return Ok(weather);
+                    var apiKey = _configuration["VisualCrossing:ApiKey"];
+                    var url = $"https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{city}?key={apiKey}";
+                    var response = await _httpClient.GetStringAsync(url);
+                    _redisdb.StringSet(city, response, TimeSpan.FromHours(12));
+                    return Ok(response);
 
                 }
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                return StatusCode (500, new {error = ex.Message});
+                return StatusCode (500, new {error = "External API unavailable"});
             }
         }
     }
