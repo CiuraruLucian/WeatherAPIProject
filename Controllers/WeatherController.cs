@@ -1,14 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using StackExchange.Redis;
-using System.Net.Http;
 
 namespace WeatherAPI.Controllers
 {
     [Route("api/weather")]
-    
+
     [ApiController]
-    
+
     [EnableRateLimiting("fixed")]
     public class WeatherController : ControllerBase
     {
@@ -21,7 +20,6 @@ namespace WeatherAPI.Controllers
 
         private readonly HttpClient _httpClient;
 
-        
         public WeatherController(IConfiguration configuration, IConnectionMultiplexer connection, HttpClient httpClient)
         {
             _configuration = configuration;
@@ -29,13 +27,14 @@ namespace WeatherAPI.Controllers
             _redisdb = connection.GetDatabase();
             _httpClient = httpClient;
         }
+
         [HttpGet("{city}")]
         public async Task<IActionResult> Get(string city)
         {
             try
             {
                 var cachedValue = _redisdb.StringGet(city);
-                if(cachedValue.HasValue)
+                if (cachedValue.HasValue)
                 {
                     return Ok(cachedValue.ToString());
                 }
@@ -51,7 +50,11 @@ namespace WeatherAPI.Controllers
             }
             catch (HttpRequestException ex)
             {
-                return StatusCode (500, new {error = "External API unavailable"});
+                return StatusCode(500, new { error = "External API unavailable" });
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
             }
         }
     }
