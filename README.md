@@ -99,6 +99,12 @@ The API returns a 500 status code if:
 * The external weather service is unavailable.
 * An unexpected error occurs during processing.
 
+## Project Reference
+
+This project is based on the roadmap.sh Weather API project:
+
+https://roadmap.sh/projects/weather-api-wrapper-service
+
 ## Author
 
 Gheorghe Lucian Ciuraru
